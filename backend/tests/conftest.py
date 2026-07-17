@@ -18,10 +18,10 @@ from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from sqlalchemy.pool import StaticPool
 
+import app.models  # noqa: F401  (register tables on Base.metadata)
 from app.db.base import Base
 from app.db.session import get_db
-from app.main import app
-import app.models  # noqa: F401  (register tables on Base.metadata)
+from app.main import app as fastapi_app
 
 # One shared in-memory SQLite connection for the whole test session.
 test_engine = create_async_engine(
@@ -46,7 +46,7 @@ async def _override_get_db():
         yield session
 
 
-app.dependency_overrides[get_db] = _override_get_db
+fastapi_app.dependency_overrides[get_db] = _override_get_db
 
 
 @pytest_asyncio.fixture
@@ -57,7 +57,7 @@ async def db_session():
 
 @pytest_asyncio.fixture
 async def client():
-    transport = ASGITransport(app=app)
+    transport = ASGITransport(app=fastapi_app)
     async with AsyncClient(transport=transport, base_url="http://test") as ac:
         yield ac
 
